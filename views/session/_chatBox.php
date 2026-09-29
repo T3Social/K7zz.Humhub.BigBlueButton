@@ -1,6 +1,6 @@
 <?php
 
-use humhub\libs\Html;
+use yii\helpers\Html;
 use humhub\modules\ui\icon\widgets\Icon;
 use yii\helpers\Url;
 
@@ -18,11 +18,11 @@ $routeBase = fn($route, $params = []) => $this->context->contentContainer
     ? $this->context->contentContainer->createUrl($route, $params)
     : Url::to(array_merge([$route], $params));
 
-$queueUrl    = $routeBase('/bbb/session/send-chat', ['id' => $session->id]);
+$queueUrl = $routeBase('/bbb/session/send-chat', ['id' => $session->id]);
 $messagesUrl = $routeBase('/bbb/session/chat-messages', ['id' => $session->id]);
-$reactUrl    = $routeBase('/bbb/session/chat-react', ['id' => $session->id]);
-$editUrl     = $routeBase('/bbb/session/chat-edit', ['id' => $session->id]);
-$deleteUrl   = $routeBase('/bbb/session/chat-delete', ['id' => $session->id]);
+$reactUrl = $routeBase('/bbb/session/chat-react', ['id' => $session->id]);
+$editUrl = $routeBase('/bbb/session/chat-edit', ['id' => $session->id]);
+$deleteUrl = $routeBase('/bbb/session/chat-delete', ['id' => $session->id]);
 
 ?>
 <div class="bbb-chat-box" id="bbb-chat-box-<?= $session->id ?>">
@@ -34,26 +34,20 @@ $deleteUrl   = $routeBase('/bbb/session/chat-delete', ['id' => $session->id]);
     </div>
 
     <div class="bbb-chat-messages mb-2" id="bbb-chat-messages-<?= $session->id ?>"
-         data-react-url="<?= Html::encode($reactUrl) ?>"
-         data-edit-url="<?= Html::encode($editUrl) ?>"
-         data-delete-url="<?= Html::encode($deleteUrl) ?>">
+        data-react-url="<?= Html::encode($reactUrl) ?>" data-edit-url="<?= Html::encode($editUrl) ?>"
+        data-delete-url="<?= Html::encode($deleteUrl) ?>">
         <?= $this->renderFile('@bbb/views/session/_chatMessages.php', [
             'messages' => $messages,
-            'session'  => $session,
+            'session' => $session,
         ]) ?>
     </div>
 
     <div class="bbb-chat-form">
         <div class="input-group">
-            <textarea id="bbb-chat-input-<?= $session->id ?>"
-                class="form-control form-control-sm"
-                rows="2"
-                placeholder="<?= Html::encode(Yii::t('BbbModule.base', 'Write a message…')) ?>"
-            ></textarea>
-            <button class="btn btn-outline-primary btn-sm bbb-chat-send"
-                data-session-id="<?= $session->id ?>"
-                data-url="<?= Html::encode($queueUrl) ?>"
-                data-messages-url="<?= Html::encode($messagesUrl) ?>"
+            <textarea id="bbb-chat-input-<?= $session->id ?>" class="form-control form-control-sm" rows="2"
+                placeholder="<?= Html::encode(Yii::t('BbbModule.base', 'Write a message…')) ?>"></textarea>
+            <button class="btn btn-outline-primary btn-sm bbb-chat-send" data-session-id="<?= $session->id ?>"
+                data-url="<?= Html::encode($queueUrl) ?>" data-messages-url="<?= Html::encode($messagesUrl) ?>"
                 title="<?= Yii::t('BbbModule.base', 'Send message') ?>">
                 <?= Icon::get('paper-plane') ?>
             </button>
@@ -63,14 +57,14 @@ $deleteUrl   = $routeBase('/bbb/session/chat-delete', ['id' => $session->id]);
 </div>
 
 <?php
-$id           = $session->id;
-$running      = (int) $running;
-$errEmpty     = Html::encode(Yii::t('BbbModule.base', 'Please enter a message.'));
-$errSend      = Html::encode(Yii::t('BbbModule.base', 'Could not send message. Please try again.'));
+$id = $session->id;
+$running = (int) $running;
+$errEmpty = Html::encode(Yii::t('BbbModule.base', 'Please enter a message.'));
+$errSend = Html::encode(Yii::t('BbbModule.base', 'Could not send message. Please try again.'));
 $successLabel = Html::encode(Yii::t('BbbModule.base', 'Message sent.'));
-$confirmDel   = Html::encode(Yii::t('BbbModule.base', 'Delete this message?'));
-$saveLabel    = Html::encode(Yii::t('BbbModule.base', 'Save'));
-$cancelLabel  = Html::encode(Yii::t('BbbModule.base', 'Cancel'));
+$confirmDel = Html::encode(Yii::t('BbbModule.base', 'Delete this message?'));
+$saveLabel = Html::encode(Yii::t('BbbModule.base', 'Save'));
+$cancelLabel = Html::encode(Yii::t('BbbModule.base', 'Cancel'));
 
 $this->registerJs(<<<JS
 (function () {

@@ -13,7 +13,7 @@
  * @var \humhub\modules\content\components\ContentContainerActiveRecord|null $contentContainer
  */
 
-use humhub\libs\Html;
+use yii\helpers\Html;
 use k7zz\humhub\bbb\widgets\SessionCard;
 use k7zz\humhub\bbb\permissions\ManageSession;
 use humhub\modules\ui\icon\widgets\Icon;
@@ -52,10 +52,10 @@ $renderRows = function (array $rows) use ($highlightId, $contextContainer): stri
     foreach ($rows as $row) {
         $container = $contextContainer ?? ($row['model']->content->container ?? null);
         $html .= SessionCard::widget([
-            'session'          => $row['model'],
-            'running'          => $row['running'],
+            'session' => $row['model'],
+            'running' => $row['running'],
             'contentContainer' => $container,
-            'highlightId'      => $highlightId ?? 0,
+            'highlightId' => $highlightId ?? 0,
         ]);
     }
     $html .= '</div>';

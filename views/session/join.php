@@ -1,5 +1,5 @@
 <?php
-use humhub\libs\Html;
+use yii\helpers\Html;
 use humhub\modules\ui\icon\widgets\Icon;
 use k7zz\humhub\bbb\assets\BBBAssets;
 
@@ -29,10 +29,10 @@ $imageUrl = $session->outputImage
                         <!-- LEFT: Session info + waiting/join state -->
                         <div class="col-md-7 bbb-session-left d-flex flex-column">
                             <?= $this->renderFile('@bbb/views/session/_sessionDetails.php', [
-                                'session'  => $session,
-                                'running'  => $running,
+                                'session' => $session,
+                                'running' => $running,
                                 'imageUrl' => $imageUrl,
-                                'top'      => true,
+                                'top' => true,
                             ]) ?>
 
                             <div class="card-body mt-auto">
@@ -65,8 +65,8 @@ $imageUrl = $session->outputImage
                         <!-- RIGHT: Chat -->
                         <div class="col-md-5 bbb-session-right d-flex flex-column">
                             <?= $this->renderFile('@bbb/views/session/_chatBox.php', [
-                                'session'  => $session,
-                                'running'  => $running,
+                                'session' => $session,
+                                'running' => $running,
                                 'messages' => $preMeetingChats ?? [],
                             ]) ?>
                         </div>

@@ -5,7 +5,7 @@ use humhub\modules\ui\icon\widgets\Icon;
 use k7zz\humhub\bbb\assets\BBBAssets;
 use k7zz\humhub\bbb\widgets\RecordingsList;
 use yii\helpers\Url;
-use humhub\libs\Html;
+use yii\helpers\Html;
 
 /** 
  * @var k7zz\humhub\bbb\models\Session $model           The session model

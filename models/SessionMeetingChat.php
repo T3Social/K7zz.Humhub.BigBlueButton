@@ -4,7 +4,7 @@ namespace k7zz\humhub\bbb\models;
 
 use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
-use humhub\libs\Html;
+use yii\helpers\Html;
 use humhub\modules\user\models\User;
 use Yii;
 
@@ -34,7 +34,7 @@ use Yii;
 class SessionMeetingChat extends ActiveRecord
 {
     public const SOURCE_HUMHUB = 'humhub';
-    public const SOURCE_BBB    = 'bbb';
+    public const SOURCE_BBB = 'bbb';
     public const SOURCE_SYSTEM = 'system';
     public const BBB_MSG_SUFFIX = ' [ext]';
 
@@ -74,12 +74,12 @@ class SessionMeetingChat extends ActiveRecord
         // Extract URLs first so inline markup can't mangle them (e.g. underscores in paths)
         $links = [];
         $text = preg_replace_callback('~https?://(?:(?!&lt;|&gt;|&quot;|&#039;)\S)+~i', function ($m) use (&$links) {
-            $url   = $m[0];
+            $url = $m[0];
             $trail = '';
             // Trailing sentence punctuation is almost never part of the URL
             if (preg_match('~[.,;:!?)]+$~', $url, $t)) {
                 $trail = $t[0];
-                $url   = substr($url, 0, -strlen($trail));
+                $url = substr($url, 0, -strlen($trail));
             }
             $key = "\x1A" . count($links) . "\x1A";
             $links[$key] = '<a href="' . $url . '" target="_blank" rel="noopener nofollow">' . $url . '</a>';
@@ -115,10 +115,10 @@ class SessionMeetingChat extends ActiveRecord
     public static function findPendingForSession(int $sessionId): ActiveQuery
     {
         return static::find()->where([
-            'session_id'          => $sessionId,
-            'session_meeting_id'  => null,
-            'source'              => self::SOURCE_HUMHUB,
-            'sent_at'             => null,
+            'session_id' => $sessionId,
+            'session_meeting_id' => null,
+            'source' => self::SOURCE_HUMHUB,
+            'sent_at' => null,
         ])->orderBy(['created_at' => SORT_ASC]);
     }
 
