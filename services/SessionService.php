@@ -10,6 +10,8 @@ use BigBlueButton\BigBlueButton;
 use BigBlueButton\Parameters\{
     CreateMeetingParameters,
     DeleteRecordingsParameters,
+    EndMeetingParameters,
+    GetMeetingInfoParameters,
     HooksCreateParameters,
     IsMeetingRunningParameters,
     JoinMeetingParameters,
@@ -23,6 +25,7 @@ use BigBlueButton\Enum\Role;
 use humhub\modules\content\components\ContentContainerActiveRecord;
 use yii\helpers\Url;
 use humhub\libs\UUID;
+use yii\httpclient\Client;
 
 /**
  * Service class for handling BigBlueButton (BBB) session logic in HumHub.
@@ -39,11 +42,27 @@ class SessionService
 {
     private const LIVE_RUNNING_CACHE_SECONDS = 15;
     private const LOCAL_RUNNING_VERIFY_SECONDS = 300;
+    private const LIVE_INFO_CACHE_SECONDS = 20;
+    // How long a meeting found lost in akka-apps is treated as not running
+    // (unless it is started again or BBB reports a new meeting-started)
+    private const LOST_MEETING_SECONDS = 3600;
+    private const PROBE_USER_NAME = 'HumHub BBB health check';
+    private const PROBE_TIMEOUT = 5;
+    // Minimum time between two probes of the same meeting from the regular polling
+    private const PROBE_INTERVAL = 60;
+    // The probe user's credentials are reused as long as they work, so that not
+    // every probe registers another (hidden) user in the meeting
+    private const PROBE_CREDENTIALS_SECONDS = 43200;
 
     /**
      * @var BigBlueButton BBB API client instance
      */
     private BigBlueButton $bbb;
+
+    /**
+     * @var string Scheme and host of the BBB server, e.g. https://bbb.example.com
+     */
+    private string $serverRoot;
 
     /**
      * Initializes the BBB API client using module settings.
@@ -56,6 +75,9 @@ class SessionService
         $secret = $settings->get('bbbSecret') ?? '';
 
         $this->bbb = new BigBlueButton($baseUrl, $secret);
+        $parts = parse_url($baseUrl) ?: [];
+        $this->serverRoot = ($parts['scheme'] ?? 'https') . '://' . ($parts['host'] ?? '')
+            . (isset($parts['port']) ? ':' . $parts['port'] : '');
     }
 
     /**
@@ -90,7 +112,7 @@ class SessionService
 
         $global = [];
         $spaces = [];
-        $users  = [];
+        $users = [];
 
         foreach ($all as $session) {
             $container = $session->content->container ?? null;
@@ -178,6 +200,9 @@ class SessionService
         }
 
         $session = Session::findOne(['uuid' => $uuid]);
+        if ($session !== null && $this->isMarkedLost($session)) {
+            return false;
+        }
         if ($session !== null) {
             $hasOpenMeeting = SessionMeeting::find()
                 ->where(['session_id' => $session->id, 'ended_at' => null])
@@ -185,7 +210,7 @@ class SessionService
             if ($hasOpenMeeting) {
                 $verifyKey = 'bbb_is_running_verified_' . $uuid;
                 if (Yii::$app->cache->get($verifyKey) === true) {
-                    return true;
+                    return $this->confirmUsable($session);
                 }
 
                 $running = $this->requestRunningStatus($uuid, $session);
@@ -196,7 +221,7 @@ class SessionService
                 if ($running) {
                     Yii::$app->cache->set($verifyKey, true, self::LOCAL_RUNNING_VERIFY_SECONDS);
                     Yii::$app->cache->set('bbb_is_running_live_' . $uuid, ['running' => true], self::LIVE_RUNNING_CACHE_SECONDS);
-                    return true;
+                    return $this->confirmUsable($session);
                 }
 
                 $this->markNotRunning($session);
@@ -207,16 +232,16 @@ class SessionService
         $cacheKey = 'bbb_is_running_live_' . $uuid;
         $cached = Yii::$app->cache->get($cacheKey);
         if (is_array($cached) && array_key_exists('running', $cached)) {
-            return (bool) $cached['running'];
+            $running = (bool) $cached['running'];
+        } else {
+            $running = $this->requestRunningStatus($uuid, $session);
+            if ($running === null) {
+                return false;
+            }
+            Yii::$app->cache->set($cacheKey, ['running' => $running], self::LIVE_RUNNING_CACHE_SECONDS);
         }
 
-        $running = $this->requestRunningStatus($uuid, $session);
-        if ($running === null) {
-            return false;
-        }
-
-        Yii::$app->cache->set($cacheKey, ['running' => $running], self::LIVE_RUNNING_CACHE_SECONDS);
-        return $running;
+        return $running && ($session === null || $this->confirmUsable($session));
     }
 
     public function refreshRunningStatus(Session $session): bool
@@ -230,6 +255,10 @@ class SessionService
             return $this->isRunning($session->uuid);
         }
 
+        if ($running && !$this->confirmUsable($session, force: true)) {
+            return false;
+        }
+
         Yii::$app->cache->set('bbb_is_running_live_' . $session->uuid, ['running' => $running], self::LIVE_RUNNING_CACHE_SECONDS);
         if ($running) {
             Yii::$app->cache->set('bbb_is_running_verified_' . $session->uuid, true, self::LOCAL_RUNNING_VERIFY_SECONDS);
@@ -239,6 +268,160 @@ class SessionService
         }
 
         return $running;
+    }
+
+    /**
+     * Checks that a meeting bbb-web reports as running is really usable (see
+     * probeMeetingUsable()) and handles it as ended if not. Called from the regular
+     * polling too, so it is throttled per session and concurrent pollers don't pile up.
+     * @param bool $force probe right now (e.g. right before joining)
+     * @return bool false if the meeting turned out to be lost
+     */
+    private function confirmUsable(Session $session, bool $force = false): bool
+    {
+        $okKey = 'bbb_probe_ok_' . $session->uuid;
+        $lockKey = 'bbb_probe_lock_' . $session->uuid;
+        if (!$force) {
+            if (Yii::$app->cache->get($okKey) !== false) {
+                return true;
+            }
+            // Another request is probing already - keep the last known state meanwhile
+            if (!Yii::$app->cache->add($lockKey, 1, self::PROBE_TIMEOUT * 3)) {
+                return true;
+            }
+        }
+
+        $usable = $this->probeMeetingUsable($session);
+        if (!$force) {
+            Yii::$app->cache->delete($lockKey);
+        }
+        if ($usable === false) {
+            $this->handleLostMeeting($session);
+            return false;
+        }
+        // Inconclusive results are throttled as well, BBB may just be slow or old
+        Yii::$app->cache->set($okKey, time(), self::PROBE_INTERVAL);
+        return true;
+    }
+
+    /**
+     * bbb-web may keep reporting a meeting as running although akka-apps has lost it
+     * (e.g. after an akka-apps restart or a lost "meeting ended" event). Joining then
+     * fails inside the client ("Ooops...", akka-apps logs "Meeting not found").
+     * Only the client's own session check reveals this, so a hidden probe user fetches
+     * the client settings exactly like the HTML5 client does.
+     * @return bool|null true = usable, false = lost in akka-apps, null = inconclusive
+     *                   (e.g. BBB < 3.0 without that endpoint, network problems)
+     */
+    private function probeMeetingUsable(Session $session): ?bool
+    {
+        $credentialsKey = 'bbb_probe_credentials_' . $session->uuid;
+        $credentials = Yii::$app->cache->get($credentialsKey);
+        if (is_array($credentials)) {
+            if ($this->probeClientSettings($session, $credentials) === true) {
+                return true;
+            }
+            // The credentials may just be stale (e.g. from an earlier meeting),
+            // so only a fresh probe join is conclusive
+            Yii::$app->cache->delete($credentialsKey);
+        }
+
+        $credentials = $this->probeJoin($session);
+        if ($credentials === null) {
+            return null;
+        }
+        $usable = $this->probeClientSettings($session, $credentials);
+        if ($usable === true) {
+            Yii::$app->cache->set($credentialsKey, $credentials, self::PROBE_CREDENTIALS_SECONDS);
+        }
+        return $usable;
+    }
+
+    /**
+     * Registers the hidden probe user (as moderator, to skip the guest lobby).
+     * @return array{token:string,cookie:string}|null
+     */
+    private function probeJoin(Session $session): ?array
+    {
+        try {
+            $jp = (new JoinMeetingParameters($session->uuid, self::PROBE_USER_NAME, Role::MODERATOR))
+                ->setUserID('humhub-probe')
+                ->setRedirect(false)
+                ->setExcludeFromDashboard(true);
+            $join = (new Client())->get($this->bbb->getJoinMeetingURL($jp), null, [], ['timeout' => self::PROBE_TIMEOUT])->send();
+            $xml = $join->isOk ? @simplexml_load_string($join->content) : false;
+            $token = $xml ? (string) $xml->session_token : '';
+            if ($token === '') {
+                return null;
+            }
+            // The session check needs the JSESSIONID cookie of the join as well
+            $cookies = [];
+            foreach ($join->cookies as $cookie) {
+                $cookies[] = $cookie->name . '=' . $cookie->value;
+            }
+            return ['token' => $token, 'cookie' => implode('; ', $cookies)];
+        } catch (\Throwable $e) {
+            Yii::warning("BBB probe join failed for session {$session->name} ({$session->id}): " . $e->getMessage(), 'bbb');
+            return null;
+        }
+    }
+
+    /**
+     * @param array{token:string,cookie:string} $credentials
+     * @return bool|null see probeMeetingUsable()
+     */
+    private function probeClientSettings(Session $session, array $credentials): ?bool
+    {
+        try {
+            $response = (new Client())->get(
+                $this->serverRoot . '/api/rest/clientSettings',
+                null,
+                ['x-session-token' => $credentials['token'], 'Cookie' => $credentials['cookie']],
+                ['timeout' => self::PROBE_TIMEOUT]
+            )->send();
+            if ($response->isOk && str_contains($response->content, 'meeting_clientSettings')) {
+                return true;
+            }
+            // The auth hook got no user back from akka-apps
+            if (str_contains($response->content, 'x-hasura-role')) {
+                return false;
+            }
+            return null;
+        } catch (\Throwable $e) {
+            Yii::warning("BBB probe failed for session {$session->name} ({$session->id}): " . $e->getMessage(), 'bbb');
+            return null;
+        }
+    }
+
+    private function isMarkedLost(Session $session): bool
+    {
+        return Yii::$app->cache->get('bbb_meeting_lost_' . $session->uuid) !== false;
+    }
+
+    /**
+     * Clears the "lost meeting" marker, e.g. when a new meeting was started.
+     */
+    public function clearLostMarker(Session $session): void
+    {
+        Yii::$app->cache->delete('bbb_meeting_lost_' . $session->uuid);
+    }
+
+    /**
+     * Treats a meeting lost in akka-apps as ended and asks BBB to end it, so that
+     * bbb-web forgets it and the session can be started again.
+     */
+    private function handleLostMeeting(Session $session): void
+    {
+        Yii::error("BBB meeting of session {$session->name} ({$session->id}) is reported running by bbb-web but unknown to akka-apps - treating it as ended", 'bbb');
+        Yii::$app->cache->set('bbb_meeting_lost_' . $session->uuid, time(), self::LOST_MEETING_SECONDS);
+        Yii::$app->cache->delete('bbb_probe_ok_' . $session->uuid);
+        Yii::$app->cache->delete('bbb_probe_credentials_' . $session->uuid);
+        $this->markNotRunning($session);
+        try {
+            $this->bbb->endMeeting(new EndMeetingParameters($session->uuid));
+        } catch (\Throwable $e) {
+            Yii::warning("BBB-EndMeeting for lost meeting of session {$session->name} ({$session->id}) failed: " . $e->getMessage(), 'bbb');
+        }
     }
 
     private function requestRunningStatus(string $uuid, ?Session $session = null): ?bool
@@ -254,6 +437,72 @@ class SessionService
         }
     }
 
+    /**
+     * Returns live statistics of a running meeting (participants, audio, video, recording, start time).
+     *
+     * Fetched via getMeetingInfo and cached per session, so that many polling clients
+     * collapse into one BBB request per cache period. Returns null if the meeting isn't
+     * running or BBB can't be reached.
+     * @return array{participants:int,moderators:int,video:int,recording:bool,startTime:int}|null
+     */
+    public function getLiveInfo(Session $session): ?array
+    {
+        if (empty($session->uuid)) {
+            return null;
+        }
+
+        $info = Yii::$app->cache->getOrSet(
+            'bbb_live_info_' . $session->uuid,
+            function () use ($session) {
+                try {
+                    $response = $this->bbb->getMeetingInfo(new GetMeetingInfoParameters($session->uuid));
+                    if (!$response->success()) {
+                        return null;
+                    }
+                    $meeting = $response->getMeeting();
+                    if (!$meeting->isRunning()) {
+                        return null;
+                    }
+                    return [
+                        'participants' => $meeting->getParticipantCount(),
+                        'moderators' => $meeting->getModeratorCount(),
+                        'video' => $meeting->getVideoCount(),
+                        'startTime' => (int) floor($meeting->getStartTime() / 1000),
+                    ];
+                } catch (\Throwable $e) {
+                    Yii::warning("BBB-GetMeetingInfo failed for session {$session->name} ({$session->id}): " . $e->getMessage(), 'bbb');
+                    return null;
+                }
+            },
+            self::LIVE_INFO_CACHE_SECONDS
+        );
+        if ($info === null) {
+            return null;
+        }
+
+        // BBB's <recording> only says the meeting *may* be recorded, not that it currently is.
+        // The actual state is only known from the recording-started/-stopped webhooks.
+        $info['recording'] = $this->isRecordingActive($session);
+        return $info;
+    }
+
+    private function isRecordingActive(Session $session): bool
+    {
+        $last = SessionMeetingChat::find()
+            ->alias('c')
+            ->innerJoin(SessionMeeting::tableName() . ' m', 'm.id = c.session_meeting_id')
+            ->where([
+                'm.session_id' => $session->id,
+                'm.ended_at' => null,
+                'c.source' => SessionMeetingChat::SOURCE_SYSTEM,
+                'c.message' => ['recording-started', 'recording-stopped'],
+            ])
+            ->orderBy(['c.id' => SORT_DESC])
+            ->select('c.message')
+            ->scalar();
+        return $last === 'recording-started';
+    }
+
     public function markNotRunning(Session $session, ?int $endedAt = null): int
     {
         $endedAt ??= time();
@@ -267,12 +516,12 @@ class SessionService
 
         if ($count > 0) {
             (new SessionMeetingChat([
-                'session_id'         => $session->id,
+                'session_id' => $session->id,
                 'session_meeting_id' => null,
-                'source'             => SessionMeetingChat::SOURCE_SYSTEM,
-                'message'            => 'meeting-ended',
-                'sender_name'        => '',
-                'created_at'         => $endedAt,
+                'source' => SessionMeetingChat::SOURCE_SYSTEM,
+                'message' => 'meeting-ended',
+                'sender_name' => '',
+                'created_at' => $endedAt,
             ]))->save();
         }
 
@@ -333,6 +582,16 @@ class SessionService
             $presentationUrl = Url::to('/bbb/public/download', true) . "?id=" . $s->id . "&type=presentation";
 
             $p->addPresentation($presentationUrl, file_get_contents($presentationUrl), $s->name . "_presentation.pdf");
+        }
+
+        // createMeeting on a meeting that bbb-web still keeps (although lost in akka-apps)
+        // would just return that broken meeting again
+        if ($this->isMarkedLost($s)) {
+            if ($this->requestRunningStatus($s->uuid, $s)) {
+                Yii::error("BBB: cannot start session {$s->name} ({$s->id}) - bbb-web still keeps the lost meeting, restarting bbb-web on the BBB server is required", 'bbb');
+                return null;
+            }
+            $this->clearLostMarker($s);
         }
 
         // Register webhook before createMeeting so meeting-started fires into an already-registered hook

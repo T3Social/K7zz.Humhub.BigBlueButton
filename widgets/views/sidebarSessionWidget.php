@@ -6,11 +6,12 @@
  * @var \humhub\modules\content\components\ContentContainerActiveRecord|null $contentContainer
  */
 
-use humhub\libs\Html;
+use humhub\helpers\Html;
 use humhub\modules\ui\icon\widgets\Icon;
 use humhub\modules\content\widgets\richtext\RichText;
 use k7zz\humhub\bbb\assets\BBBAssets;
 use yii\helpers\Url;
+use k7zz\humhub\bbb\widgets\LiveStats;
 
 $bundle = BBBAssets::register(view: $this);
 $routeBase = '/bbb/session';
@@ -54,6 +55,8 @@ $routePrefix = $contentContainer
         </a>
 
         <div class="panel-body" style="padding-bottom: 8px;">
+            <?= LiveStats::widget(['session' => $session, 'running' => $running, 'cssClass' => 'mb-2']) ?>
+
 
             <?= RichText::output($session->description) ?>
 

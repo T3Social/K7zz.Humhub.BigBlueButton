@@ -75,6 +75,8 @@ class WebhookProcessor
             return null;
         }
 
+        Yii::$app->cache->delete('bbb_meeting_lost_' . $session->uuid);
+
         $now     = time();
         $meeting = new SessionMeeting([
             'session_id'          => $session->id,

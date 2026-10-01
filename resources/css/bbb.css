@@ -446,3 +446,20 @@ label div.hint-block {
         color: #ccc;
     }
 }
+/* --- Live meeting statistics --- */
+.bbb-live-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    font-size: 0.8rem;
+    color: var(--bs-secondary, #6c757d);
+}
+
+.bbb-live-stat {
+    white-space: nowrap;
+}
+
+.bbb-live-stat.text-danger {
+    font-weight: 600;
+}

@@ -17,6 +17,7 @@ class PublicController extends Controller
      * @var SessionService|null
      */
     protected ?SessionService $svc = null;
+    protected string $pathBase = 'uploads';
 
     /**
      * Initializes the controller and the session service.
@@ -76,11 +77,23 @@ class PublicController extends Controller
         return $this->redirect($joinUrl);
     }
 
-    public function actionIsRunning(string $token)
+    /**
+     * With $fresh the cache is bypassed and BBB is asked directly (used right before joining).
+     */
+    public function actionIsRunning(string $token, bool $fresh = false)
     {
         $session = Session::find()->where(['public_token' => $token])->one();
         Yii::$app->response->format = Response::FORMAT_JSON;
-        return ['running' => $session && $session->public_join && $this->svc->isRunning($session->uuid)];
+        $running = $session && $session->public_join && ($fresh
+            ? $this->svc->refreshRunningStatus($session)
+            : $this->svc->isRunning($session->uuid));
+        $response = ['running' => $running];
+        if ($running) {
+            $response['live'] = $this->svc->getLiveInfo($session);
+        } elseif ($fresh) {
+            $response['message'] = Yii::t('BbbModule.base', 'The meeting is no longer running. Please wait until it is restarted.');
+        }
+        return $response;
     }
 
     public function actionDownload(
@@ -112,8 +125,13 @@ class PublicController extends Controller
                 Yii::$app->response->headers->set('Access-Control-Allow-Origin', '*');
                 Yii::$app->response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
             }
+            $path = $this->pathBase . "/" . $file->store->get();
+            if (!file_exists($path)) {
+                throw new NotFoundHttpException("File $path doesn't not exist!");
+            }
+            Yii::error($path);
             return Yii::$app->response->sendFile(
-                $file->getStore()->get(),
+                $path,
                 $file->file_name,
                 [
                     'inline' => $inline,

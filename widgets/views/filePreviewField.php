@@ -11,7 +11,7 @@
  * @var string $maxHeight
  */
 
-use yii\helpers\Html;
+use humhub\helpers\Html;
 $maxHeight ??= '200px';
 
 $inputId = Html::getInputId($model, $attribute);

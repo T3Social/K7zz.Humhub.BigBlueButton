@@ -1,9 +1,10 @@
 <?php
-use humhub\libs\Html;
+use humhub\helpers\Html;
 use humhub\modules\content\widgets\richtext\RichText;
 use humhub\modules\ui\icon\widgets\Icon;
 use k7zz\humhub\bbb\assets\BBBAssets;
 use yii\helpers\Url;
+use k7zz\humhub\bbb\widgets\LiveStats;
 
 /* @var $this \yii\web\View */
 /* @var $session \k7zz\humhub\bbb\models\Session|null */
@@ -48,22 +49,6 @@ $membersJoinUrlPath = $container
                             </div>
                             <hr>
                         <?php endif; ?>
-                        <div class="alert alert-warning">
-                            <?= Yii::t('BbbModule.base', 'This page is used for guest access. If you have an account, please log in and then join again.') ?>
-
-                            <span id="bbb-members-url-<?= $session->id ?>"
-                                class="d-none"><?= Html::encode(Url::to($membersJoinUrlPath, true)) ?></span>
-                            <?= Html::a(
-                                Icon::get('copy') . ' ' . Yii::t('BbbModule.base', 'Copy members join link'),
-                                '#',
-                                [
-                                    'class' => 'btn btn-warning btn-sm',
-                                    'title' => Yii::t('BbbModule.base', 'Copy members access URL to clipboard'),
-                                    'data-action-click' => 'copyToClipboard',
-                                    'data-action-target' => '#bbb-members-url-' . $session->id,
-                                ]
-                            ) ?>
-                        </div>
 
                         <?php if ($msg): ?>
                             <div class="alert alert-danger"><?= Html::encode($msg) ?></div>
@@ -78,6 +63,8 @@ $membersJoinUrlPath = $container
                                 <i class="fa fa-check"></i>
                                 <?= Yii::t('BbbModule.base', 'The session has started!') ?>
                             </div>
+
+                            <?= LiveStats::widget(['session' => $session, 'running' => $running, 'cssClass' => 'mb-3']) ?>
 
                             <p><?= Yii::t('BbbModule.base', 'Please enter your name below:') ?></p>
                             <form method="get" action="<?= Html::encode($action) ?>" data-bbb-launch-window>

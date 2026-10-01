@@ -1,5 +1,5 @@
 <?php
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use humhub\modules\ui\icon\widgets\Icon;
 use k7zz\humhub\bbb\assets\BBBAssets;
 
@@ -19,7 +19,7 @@ $imageUrl = $session->outputImage
     : $bundle->baseUrl . '/images/conference.png';
 ?>
 <div id="layout-content" data-bbb-check-state="<?= Html::encode($isRunningUrl) ?>" data-bbb-redirect-on-change
-    data-bbb-redirect-state="<?= $running ? 'running' : 'waiting' ?>">
+    data-bbb-state="<?= $running ? 'running' : 'waiting' ?>">
     <div class="container-fluid">
         <div class="row">
             <div class="col-12 col-xl-10 offset-xl-1">

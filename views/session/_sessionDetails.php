@@ -1,9 +1,10 @@
 <?php
-use humhub\libs\Html;
+use humhub\helpers\Html;
 use humhub\modules\content\widgets\richtext\RichText;
 use humhub\modules\topic\models\Topic;
-use humhub\modules\topic\widgets\TopicLabel;
+use humhub\modules\topic\widgets\TopicBadge;
 use humhub\modules\ui\icon\widgets\Icon;
+use k7zz\humhub\bbb\widgets\LiveStats;
 
 /* @var $this \yii\web\View */
 /* @var $session \k7zz\humhub\bbb\models\Session */
@@ -54,6 +55,8 @@ $headingTag = $top ? 'h1' : 'h4';
     </span>
     <?= Html::endTag($headingTag) ?>
 
+    <?= LiveStats::widget(['session' => $session, 'running' => $running, 'cssClass' => 'mb-2']) ?>
+
     <?php if ($session->description): ?>
         <p class="card-text">
             <?= RichText::output($session->description) ?>
@@ -64,7 +67,7 @@ $headingTag = $top ? 'h1' : 'h4';
     <?php if (!empty($topics)): ?>
         <div class="topic-label-list">
             <?php foreach ($topics as $topic): ?>
-                <?= TopicLabel::forTopic($topic, $this->context->contentContainer) ?>
+                <?= TopicBadge::forTopic($topic, $this->context->contentContainer) ?>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>

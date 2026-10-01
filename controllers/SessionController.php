@@ -153,6 +153,7 @@ class SessionController extends BaseContentController
                 $joinUrl = $this->svc->start($session, $this->contentContainer);
                 if (!$joinUrl) {
                     Yii::$app->getSession()->setFlash('access-denied', Yii::t('BbbModule.base', 'Could not start session "{title}".', ['title' => $session->title]));
+                    return $this->redirect($this->getUrl(url: "/bbb/session/{$session->name}"));
                 }
                 if ($session->notify_on_start) {
                     $this->notifySessionStarted($session);
@@ -280,11 +281,13 @@ class SessionController extends BaseContentController
     /**
      * Returns JSON whether a session is currently running.
      * Used by the join-waiting page to poll without a full reload.
+     * With $fresh the cache is bypassed and BBB is asked directly (used right before joining).
      * @param int|null $id
+     * @param bool $fresh
      * @return \yii\web\Response
      * @throws NotFoundHttpException|ForbiddenHttpException
      */
-    public function actionIsRunning(?int $id = null)
+    public function actionIsRunning(?int $id = null, bool $fresh = false)
     {
         if ($id === null) {
             throw new NotFoundHttpException();
@@ -296,9 +299,16 @@ class SessionController extends BaseContentController
             throw new ForbiddenHttpException();
         }
 
-        $running = $this->svc->isRunning($session->uuid);
+        $running = $fresh
+            ? $this->svc->refreshRunningStatus($session)
+            : $this->svc->isRunning($session->uuid);
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $response = ['running' => $running];
+        if ($running) {
+            $response['live'] = $this->svc->getLiveInfo($session);
+        } elseif ($fresh) {
+            $response['message'] = Yii::t('BbbModule.base', 'The meeting is no longer running. Please start the session again or wait until it is restarted.');
+        }
         if ($session->canStart() && Yii::$app->cache->get('bbb:hook_failed:' . $session->id) !== false) {
             $response['hookFailed'] = true;
         }

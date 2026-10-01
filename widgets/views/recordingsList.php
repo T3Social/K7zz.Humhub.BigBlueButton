@@ -8,7 +8,7 @@
  * @var int $sessionId
  */
 
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use yii\helpers\Json;
 use yii\web\View;
 
