@@ -3,8 +3,8 @@
  * @var k7zz\humhub\bbb\models\forms\SessionForm $model
  */
 
-use humhub\modules\ui\form\widgets\ContentHiddenCheckbox;
-use humhub\modules\ui\form\widgets\ContentVisibilitySelect;
+use humhub\widgets\form\ContentHiddenCheckbox;
+use humhub\widgets\form\ContentVisibilitySelect;
 use humhub\modules\user\widgets\UserPickerField;
 use humhub\modules\content\widgets\richtext\RichTextField;
 use humhub\modules\topic\widgets\TopicPicker;
@@ -12,7 +12,7 @@ use k7zz\humhub\bbb\models\forms\SessionForm;
 use k7zz\humhub\bbb\widgets\FilePreviewField;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use k7zz\humhub\bbb\assets\BBBAssets;
 use humhub\modules\space\models\Space;
 use humhub\modules\user\models\User;

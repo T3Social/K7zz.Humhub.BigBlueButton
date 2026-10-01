@@ -6,7 +6,7 @@ use humhub\modules\notification\components\BaseNotification;
 use humhub\modules\user\models\User;
 use k7zz\humhub\bbb\models\Session;
 use Yii;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 /**
  * Notifies session moderators that BBB webhook events are not being received,
@@ -56,7 +56,7 @@ class WebhookMissing extends BaseNotification
         }
 
         $notification = static::instance()->from($creator)->about($session);
-        $notifiedIds  = [];
+        $notifiedIds = [];
 
         $moderators = User::find()
             ->innerJoin('bbb_session_user su', 'su.user_id = user.id')

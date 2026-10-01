@@ -1,6 +1,6 @@
 <?php
 
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use k7zz\humhub\bbb\models\SessionChatReaction;
 use k7zz\humhub\bbb\models\SessionMeeting;
 use k7zz\humhub\bbb\models\SessionMeetingChat;

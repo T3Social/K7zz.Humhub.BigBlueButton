@@ -5,7 +5,7 @@ namespace k7zz\humhub\bbb\notifications;
 use humhub\modules\notification\components\BaseNotification;
 use humhub\modules\user\models\User;
 use Yii;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 class SessionStarted extends BaseNotification
 {

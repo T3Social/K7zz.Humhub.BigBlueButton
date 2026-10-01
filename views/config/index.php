@@ -5,7 +5,7 @@
  * @var k7zz\humhub\bbb\models\forms\SettingsForm $model  The settings form model
  */
 
-use humhub\modules\ui\form\widgets\ActiveForm;
+use humhub\widgets\form\ActiveForm;
 use humhub\modules\ui\icon\widgets\Icon;
 use yii\helpers\Url;
 $url = Url::to('/bbb/sessions');
@@ -44,7 +44,7 @@ $url = Url::to('/bbb/sessions');
 
 
             <h3><?= Yii::t('BbbModule.config', 'Chat Integration') ?></h3>
-                <?= Yii::t('BbbModule.config', 'Will not work without functioning webhooks feature of your BigBlueButton Server.') ?>
+            <?= Yii::t('BbbModule.config', 'Will not work without functioning webhooks feature of your BigBlueButton Server.') ?>
             <?= $form->field($model, 'integrateBbbChat')
                 ->checkbox()
                 ->hint(Yii::t('BbbModule.config', 'Enables a persistent session chat on session pages. Messages can be written before, during and after meetings and are synchronised with BBB chat in real time.')) ?>

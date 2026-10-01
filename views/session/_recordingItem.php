@@ -9,7 +9,7 @@
  */
 
 use k7zz\humhub\bbb\models\Recording;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use yii\helpers\Url;
 use humhub\modules\ui\icon\widgets\Icon;
 

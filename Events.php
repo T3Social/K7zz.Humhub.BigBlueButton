@@ -18,7 +18,7 @@ use k7zz\humhub\bbb\permissions\ManageSession;
 use k7zz\humhub\bbb\widgets\SidebarSessionWidget;
 use k7zz\humhub\bbb\models\forms\ContainerSettingsForm;
 use Yii;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 class Events
 {

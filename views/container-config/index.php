@@ -5,7 +5,7 @@
  * @var k7zz\humhub\bbb\models\forms\ContainerSettingsForm $model  The container settings form model
  */
 
-use humhub\modules\ui\form\widgets\ActiveForm;
+use humhub\widgets\form\ActiveForm;
 use humhub\modules\ui\icon\widgets\Icon;
 use humhub\modules\user\models\User;
 

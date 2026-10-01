@@ -7,7 +7,7 @@ use humhub\modules\user\models\User;
 use k7zz\humhub\bbb\models\SessionMeetingChat;
 use k7zz\humhub\bbb\models\SessionUser;
 use Yii;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 /**
  * Notifies session moderators when a chat message is received (off-meeting or live).
@@ -34,7 +34,7 @@ class ChatMsgReceived extends BaseNotification
     {
         return Yii::t('BbbModule.base', '{displayName} sent a BBB chat message in: {title}', [
             'displayName' => $this->originator->displayName,
-            'title'       => $this->source->session->title,
+            'title' => $this->source->session->title,
         ]);
     }
 
@@ -42,8 +42,8 @@ class ChatMsgReceived extends BaseNotification
     {
         return '<i class="fa fa-comment"></i> ' . Yii::t('BbbModule.base', '{displayName} wrote in BBB session "{title}": {message}', [
             'displayName' => Html::tag('strong', Html::encode($this->originator->displayName)),
-            'title'       => Html::encode($this->source->session->title),
-            'message'     => Html::encode(mb_strimwidth($this->source->message, 0, 80, '…')),
+            'title' => Html::encode($this->source->session->title),
+            'message' => Html::encode(mb_strimwidth($this->source->message, 0, 80, '…')),
         ]);
     }
 
@@ -90,7 +90,8 @@ class ChatMsgReceived extends BaseNotification
 
         // Profile container owner (User container only)
         $owner = $session->content->container;
-        if ($owner instanceof User
+        if (
+            $owner instanceof User
             && $owner->id !== $originator->id
             && !in_array($owner->id, $alreadyNotifiedIds, true)
         ) {

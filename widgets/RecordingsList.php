@@ -2,7 +2,7 @@
 namespace k7zz\humhub\bbb\widgets;
 use Yii\web\View;
 use humhub\components\Widget;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use Yii;
 use yii\helpers\Url;
 

@@ -7,7 +7,7 @@ use humhub\modules\user\models\User;
 use k7zz\humhub\bbb\models\Session;
 use k7zz\humhub\bbb\models\SessionUser;
 use Yii;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 /**
  * Notifies session moderators when a BBB recording has been published and is ready to view.

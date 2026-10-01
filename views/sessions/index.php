@@ -13,7 +13,7 @@
  * @var \humhub\modules\content\components\ContentContainerActiveRecord|null $contentContainer
  */
 
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use k7zz\humhub\bbb\widgets\SessionCard;
 use k7zz\humhub\bbb\permissions\ManageSession;
 use humhub\modules\ui\icon\widgets\Icon;

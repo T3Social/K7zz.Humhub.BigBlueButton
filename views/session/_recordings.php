@@ -6,7 +6,7 @@
  * @var bool $canAdminister
  * @var int $sessionId */
 
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 ?>
 

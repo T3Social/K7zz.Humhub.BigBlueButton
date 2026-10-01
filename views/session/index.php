@@ -1,5 +1,5 @@
 <?php
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use humhub\modules\ui\icon\widgets\Icon;
 use k7zz\humhub\bbb\assets\BBBAssets;
 use yii\helpers\Url;

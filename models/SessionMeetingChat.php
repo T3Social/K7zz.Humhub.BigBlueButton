@@ -4,7 +4,7 @@ namespace k7zz\humhub\bbb\models;
 
 use yii\db\ActiveRecord;
 use yii\db\ActiveQuery;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 use humhub\modules\user\models\User;
 use Yii;
 

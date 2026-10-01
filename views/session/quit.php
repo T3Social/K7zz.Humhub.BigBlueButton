@@ -4,7 +4,7 @@
  *
  * @var k7zz\humhub\bbb\models\forms\SessionForm $session  The session form model
  */
-use yii\helpers\Html;
+use humhub\helpers\Html;
 ?>
 
 <div class="content">

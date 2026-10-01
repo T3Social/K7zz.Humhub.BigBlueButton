@@ -5,7 +5,7 @@ namespace k7zz\humhub\bbb\notifications;
 use humhub\modules\notification\components\BaseNotification;
 use k7zz\humhub\bbb\models\SessionChatReaction;
 use Yii;
-use yii\helpers\Html;
+use humhub\helpers\Html;
 
 /**
  * Notifies the author of a chat message when someone reacts to it.
@@ -32,7 +32,7 @@ class ChatMsgReaction extends BaseNotification
     {
         return Yii::t('BbbModule.base', '{displayName} reacted to your BBB chat message in: {title}', [
             'displayName' => $this->originator->displayName,
-            'title'       => $this->source->chat->session->title,
+            'title' => $this->source->chat->session->title,
         ]);
     }
 
@@ -40,9 +40,9 @@ class ChatMsgReaction extends BaseNotification
     {
         return Yii::t('BbbModule.base', '{displayName} reacted with {emoji} to your message in BBB session "{title}": {message}', [
             'displayName' => Html::tag('strong', Html::encode($this->originator->displayName)),
-            'emoji'       => $this->source->emoji,
-            'title'       => Html::encode($this->source->chat->session->title),
-            'message'     => Html::encode(mb_strimwidth($this->source->chat->message, 0, 80, '…')),
+            'emoji' => $this->source->emoji,
+            'title' => Html::encode($this->source->chat->session->title),
+            'message' => Html::encode(mb_strimwidth($this->source->chat->message, 0, 80, '…')),
         ]);
     }
 
